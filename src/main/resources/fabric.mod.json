@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "linksinchat",
+  "version": "${version}",
+  "name": "Links In Chat",
+  "description": "A mod that lets you put clickable links in chat and whispers",
+  "authors": [
+    "BorisShoes"
+  ],
+  "contact": {
+    "repo": "https://github.com/borisshoes/fabric-linksinchat"
+  },
+  "license": "MIT",
+  "icon": "assets/linksinchat/icon.png",
+  "environment": "server",
+  "entrypoints": {
+    "main": [
+      "net.borisshoes.linksinchat.Linksinchat"
+    ]
+  },
+  "mixins": [
+    "linksinchat.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.14.9",
+    "fabric": "*",
+    "minecraft": "1.19.2"
+  }
+}
