@@ -13,6 +13,8 @@ import net.minecraft.util.Formatting;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.net.URI;
+
 import static net.minecraft.command.argument.MessageArgumentType.getMessage;
 import static net.minecraft.command.argument.MessageArgumentType.message;
 import static net.minecraft.server.command.CommandManager.argument;
@@ -44,9 +46,12 @@ public class Linksinchat implements ModInitializer {
       try{
          ServerPlayerEntity player = source.getPlayer();
          
-         if(message.contains(" ") || !(message.contains("https://")||message.contains("http://"))){
-            final Text error = Text.literal("Links cannot have spaces and must have http://").formatted(Formatting.RED,Formatting.ITALIC);
-            player.sendMessage(error,false);
+         URI uri;
+         try{
+            uri = URI.create(message);
+         }catch(Exception e){
+            final Text error = Text.literal("Invalid Link").formatted(Formatting.RED, Formatting.ITALIC);
+            player.sendMessage(error, false);
             return -1;
          }
          
@@ -56,13 +61,14 @@ public class Linksinchat implements ModInitializer {
          final Text announceText = Text.literal("")
                .append(Text.literal(source.getName()).formatted(playerColor).formatted())
                .append(Text.literal(" has a link to share!").formatted());
+         URI finalUri = uri;
          final Text text = Text.literal(message).styled(s ->
-               s.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, message))
-                     .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.literal("Click to Open Link!")))
+               s.withClickEvent(new ClickEvent.OpenUrl(finalUri))
+                     .withHoverEvent(new HoverEvent.ShowText(Text.literal("Click to Open Link!")))
                      .withColor(Formatting.BLUE).withUnderline(true));
          
-         source.getServer().getPlayerManager().broadcast(announceText,false);
-         source.getServer().getPlayerManager().broadcast(text,false);
+         source.getServer().getPlayerManager().broadcast(announceText, false);
+         source.getServer().getPlayerManager().broadcast(text, false);
          return Command.SINGLE_SUCCESS; // Success
       }catch(Exception e){
          e.printStackTrace();
@@ -74,9 +80,12 @@ public class Linksinchat implements ModInitializer {
       try{
          ServerPlayerEntity player = source.getPlayer();
          
-         if(message.contains(" ") || !(message.contains("https://")||message.contains("http://"))){
-            final Text error = Text.literal("Links cannot have spaces and must have http://").formatted(Formatting.RED,Formatting.ITALIC);
-            player.sendMessage(error,false);
+         URI uri;
+         try{
+            uri = URI.create(message);
+         }catch(Exception e){
+            final Text error = Text.literal("Invalid Link").formatted(Formatting.RED, Formatting.ITALIC);
+            player.sendMessage(error, false);
             return -1;
          }
          
@@ -89,8 +98,8 @@ public class Linksinchat implements ModInitializer {
                   .append(Text.literal(source.getName()).formatted(playerColor).formatted(Formatting.ITALIC));
             
             final Text senderLink = Text.literal(message).styled(s ->
-                  s.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, message))
-                        .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.literal("Click to Open Link!")))
+                  s.withClickEvent(new ClickEvent.OpenUrl(uri))
+                        .withHoverEvent(new HoverEvent.ShowText(Text.literal("Click to Open Link!")))
                         .withColor(Formatting.BLUE).withItalic(true));
             player.sendMessage(senderText);
             player.sendMessage(senderLink);
@@ -100,8 +109,8 @@ public class Linksinchat implements ModInitializer {
                .append(Text.literal(source.getName()).formatted(playerColor).formatted(Formatting.ITALIC))
                .append(Text.literal(" whispers a link to you!").formatted(Formatting.GRAY,Formatting.ITALIC));
          final Text text = Text.literal(message).styled(s ->
-               s.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, message))
-                     .withHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, Text.literal("Click to Open Link!")))
+               s.withClickEvent(new ClickEvent.OpenUrl(uri))
+                     .withHoverEvent(new HoverEvent.ShowText(Text.literal("Click to Open Link!")))
                      .withColor(Formatting.BLUE).withItalic(true).withUnderline(true));
          
          target.sendMessage(announceText);
