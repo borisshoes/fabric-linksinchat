@@ -14,6 +14,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 
 import static net.minecraft.command.argument.MessageArgumentType.getMessage;
 import static net.minecraft.command.argument.MessageArgumentType.message;
@@ -44,13 +46,14 @@ public class Linksinchat implements ModInitializer {
    
    public static int broadcast(ServerCommandSource source, String message) throws CommandSyntaxException{
       try{
+         final Text error = Text.literal("Invalid Link").formatted(Formatting.RED, Formatting.ITALIC);
          ServerPlayerEntity player = source.getPlayer();
          
          URI uri;
          try{
-            uri = URI.create(message);
+            uri = ensureHttpsAndValidate(message);
+            if(uri == null) throw new RuntimeException();
          }catch(Exception e){
-            final Text error = Text.literal("Invalid Link").formatted(Formatting.RED, Formatting.ITALIC);
             player.sendMessage(error, false);
             return -1;
          }
@@ -82,7 +85,8 @@ public class Linksinchat implements ModInitializer {
          
          URI uri;
          try{
-            uri = URI.create(message);
+            uri = ensureHttpsAndValidate(message);
+            if(uri == null) throw new RuntimeException();
          }catch(Exception e){
             final Text error = Text.literal("Invalid Link").formatted(Formatting.RED, Formatting.ITALIC);
             player.sendMessage(error, false);
@@ -122,5 +126,23 @@ public class Linksinchat implements ModInitializer {
       }
    }
    
-   
+   public static URI ensureHttpsAndValidate(String input) {
+      if (input == null) return null;
+      String urlStr = input.trim();
+      if (urlStr.isEmpty()) return null;
+      if (!urlStr.matches("^[a-zA-Z][a-zA-Z0-9+.-]*://.*$")) {
+         urlStr = "https://" + urlStr;
+      }
+      try {
+         URI uri = new URI(urlStr);
+         String scheme = uri.getScheme();
+         if (scheme == null) return null;
+         if (!scheme.equalsIgnoreCase("http") && !scheme.equalsIgnoreCase("https")) return null;
+         String host = uri.getHost();
+         if (host == null || host.isEmpty()) return null;
+         return uri;
+      } catch (URISyntaxException e) {
+         return null;
+      }
+   }
 }
