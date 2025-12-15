@@ -4,12 +4,14 @@ import com.mojang.brigadier.Command;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-import net.minecraft.command.argument.EntityArgumentType;
-import net.minecraft.scoreboard.AbstractTeam;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.*;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.scores.Team;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -17,10 +19,10 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 
-import static net.minecraft.command.argument.MessageArgumentType.getMessage;
-import static net.minecraft.command.argument.MessageArgumentType.message;
-import static net.minecraft.server.command.CommandManager.argument;
-import static net.minecraft.server.command.CommandManager.literal;
+import static net.minecraft.commands.Commands.argument;
+import static net.minecraft.commands.Commands.literal;
+import static net.minecraft.commands.arguments.MessageArgument.getMessage;
+import static net.minecraft.commands.arguments.MessageArgument.message;
 
 public class Linksinchat implements ModInitializer {
    public static final Logger LOGGER = LogManager.getLogger("Links In Chat");
@@ -35,43 +37,41 @@ public class Linksinchat implements ModInitializer {
                      .executes(ctx -> broadcast(ctx.getSource(), getMessage(ctx, "message").getString())))
          );
          dispatcher.register(literal("linkwhisper")
-               .then(argument("player", EntityArgumentType.player())
+               .then(argument("player", EntityArgument.player())
                      .then(argument("message", message())
-                           .executes(ctx -> whisper(ctx.getSource(), getMessage(ctx, "message").getString(),EntityArgumentType.getPlayer(ctx,"player")))))
+                           .executes(ctx -> whisper(ctx.getSource(), getMessage(ctx, "message").getString(), EntityArgument.getPlayer(ctx,"player")))))
          );
       });
-      
-      
    }
    
-   public static int broadcast(ServerCommandSource source, String message) throws CommandSyntaxException{
+   public static int broadcast(CommandSourceStack source, String message) throws CommandSyntaxException{
       try{
-         final Text error = Text.literal("Invalid Link").formatted(Formatting.RED, Formatting.ITALIC);
-         ServerPlayerEntity player = source.getPlayer();
+         final Component error = Component.literal("Invalid Link").withStyle(ChatFormatting.RED, ChatFormatting.ITALIC);
+         ServerPlayer player = source.getPlayer();
          
          URI uri;
          try{
             uri = ensureHttpsAndValidate(message);
             if(uri == null) throw new RuntimeException();
          }catch(Exception e){
-            player.sendMessage(error, false);
+            player.displayClientMessage(error, false);
             return -1;
          }
          
-         AbstractTeam abstractTeam = player.getScoreboardTeam();
-         Formatting playerColor = abstractTeam != null && abstractTeam.getColor() != null ? abstractTeam.getColor() : Formatting.WHITE;
+         Team abstractTeam = player.getTeam();
+         ChatFormatting playerColor = abstractTeam != null ? abstractTeam.getColor() : ChatFormatting.WHITE;
          
-         final Text announceText = Text.literal("")
-               .append(Text.literal(source.getName()).formatted(playerColor).formatted())
-               .append(Text.literal(" has a link to share!").formatted());
+         final Component announceText = Component.literal("")
+               .append(Component.literal(source.getTextName()).withStyle(playerColor).withStyle())
+               .append(Component.literal(" has a link to share!").withStyle());
          URI finalUri = uri;
-         final Text text = Text.literal(message).styled(s ->
+         final Component text = Component.literal(message).withStyle(s ->
                s.withClickEvent(new ClickEvent.OpenUrl(finalUri))
-                     .withHoverEvent(new HoverEvent.ShowText(Text.literal("Click to Open Link!")))
-                     .withColor(Formatting.BLUE).withUnderline(true));
+                     .withHoverEvent(new HoverEvent.ShowText(Component.literal("Click to Open Link!")))
+                     .withColor(ChatFormatting.BLUE).withUnderlined(true));
          
-         source.getServer().getPlayerManager().broadcast(announceText, false);
-         source.getServer().getPlayerManager().broadcast(text, false);
+         source.getServer().getPlayerList().broadcastSystemMessage(announceText, false);
+         source.getServer().getPlayerList().broadcastSystemMessage(text, false);
          return Command.SINGLE_SUCCESS; // Success
       }catch(Exception e){
          e.printStackTrace();
@@ -79,46 +79,46 @@ public class Linksinchat implements ModInitializer {
       }
    }
    
-   public static int whisper(ServerCommandSource source, String message, ServerPlayerEntity target) throws CommandSyntaxException{
+   public static int whisper(CommandSourceStack source, String message, ServerPlayer target) throws CommandSyntaxException{
       try{
-         ServerPlayerEntity player = source.getPlayer();
+         ServerPlayer player = source.getPlayer();
          
          URI uri;
          try{
             uri = ensureHttpsAndValidate(message);
             if(uri == null) throw new RuntimeException();
          }catch(Exception e){
-            final Text error = Text.literal("Invalid Link").formatted(Formatting.RED, Formatting.ITALIC);
-            player.sendMessage(error, false);
+            final Component error = Component.literal("Invalid Link").withStyle(ChatFormatting.RED, ChatFormatting.ITALIC);
+            player.displayClientMessage(error, false);
             return -1;
          }
          
-         AbstractTeam abstractTeam = player.getScoreboardTeam();
-         Formatting playerColor = abstractTeam != null && abstractTeam.getColor() != null ? abstractTeam.getColor() : Formatting.WHITE;
+         Team abstractTeam = player.getTeam();
+         ChatFormatting playerColor = abstractTeam != null ? abstractTeam.getColor() : ChatFormatting.WHITE;
          
          if (!player.equals(target)){
-            final Text senderText = Text.literal("")
-                  .append(Text.literal("You whisper a link to ").formatted(Formatting.GRAY,Formatting.ITALIC))
-                  .append(Text.literal(source.getName()).formatted(playerColor).formatted(Formatting.ITALIC));
+            final Component senderText = Component.literal("")
+                  .append(Component.literal("You whisper a link to ").withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC))
+                  .append(Component.literal(source.getTextName()).withStyle(playerColor).withStyle(ChatFormatting.ITALIC));
             
-            final Text senderLink = Text.literal(message).styled(s ->
+            final Component senderLink = Component.literal(message).withStyle(s ->
                   s.withClickEvent(new ClickEvent.OpenUrl(uri))
-                        .withHoverEvent(new HoverEvent.ShowText(Text.literal("Click to Open Link!")))
-                        .withColor(Formatting.BLUE).withItalic(true));
-            player.sendMessage(senderText);
-            player.sendMessage(senderLink);
+                        .withHoverEvent(new HoverEvent.ShowText(Component.literal("Click to Open Link!")))
+                        .withColor(ChatFormatting.BLUE).withItalic(true));
+            player.sendSystemMessage(senderText);
+            player.sendSystemMessage(senderLink);
          }
          
-         final Text announceText = Text.literal("")
-               .append(Text.literal(source.getName()).formatted(playerColor).formatted(Formatting.ITALIC))
-               .append(Text.literal(" whispers a link to you!").formatted(Formatting.GRAY,Formatting.ITALIC));
-         final Text text = Text.literal(message).styled(s ->
+         final Component announceText = Component.literal("")
+               .append(Component.literal(source.getTextName()).withStyle(playerColor).withStyle(ChatFormatting.ITALIC))
+               .append(Component.literal(" whispers a link to you!").withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
+         final Component text = Component.literal(message).withStyle(s ->
                s.withClickEvent(new ClickEvent.OpenUrl(uri))
-                     .withHoverEvent(new HoverEvent.ShowText(Text.literal("Click to Open Link!")))
-                     .withColor(Formatting.BLUE).withItalic(true).withUnderline(true));
+                     .withHoverEvent(new HoverEvent.ShowText(Component.literal("Click to Open Link!")))
+                     .withColor(ChatFormatting.BLUE).withItalic(true).withUnderlined(true));
          
-         target.sendMessage(announceText);
-         target.sendMessage(text);
+         target.sendSystemMessage(announceText);
+         target.sendSystemMessage(text);
          return Command.SINGLE_SUCCESS; // Success
       }catch(Exception e){
          e.printStackTrace();
