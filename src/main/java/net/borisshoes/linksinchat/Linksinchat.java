@@ -39,7 +39,7 @@ public class Linksinchat implements ModInitializer {
          dispatcher.register(literal("linkwhisper")
                .then(argument("player", EntityArgument.player())
                      .then(argument("message", message())
-                           .executes(ctx -> whisper(ctx.getSource(), getMessage(ctx, "message").getString(), EntityArgument.getPlayer(ctx,"player")))))
+                           .executes(ctx -> whisper(ctx.getSource(), getMessage(ctx, "message").getString(), EntityArgument.getPlayer(ctx, "player")))))
          );
       });
    }
@@ -54,12 +54,14 @@ public class Linksinchat implements ModInitializer {
             uri = ensureHttpsAndValidate(message);
             if(uri == null) throw new RuntimeException();
          }catch(Exception e){
-            player.displayClientMessage(error, false);
+            source.sendFailure(error);
             return -1;
          }
          
-         Team abstractTeam = player.getTeam();
-         ChatFormatting playerColor = abstractTeam != null ? abstractTeam.getColor() : ChatFormatting.WHITE;
+         ChatFormatting playerColor = ChatFormatting.WHITE;
+         if(player != null && player.getTeam() != null){
+            playerColor = player.getTeam().getColor();
+         }
          
          final Component announceText = Component.literal("")
                .append(Component.literal(source.getTextName()).withStyle(playerColor).withStyle())
@@ -89,14 +91,14 @@ public class Linksinchat implements ModInitializer {
             if(uri == null) throw new RuntimeException();
          }catch(Exception e){
             final Component error = Component.literal("Invalid Link").withStyle(ChatFormatting.RED, ChatFormatting.ITALIC);
-            player.displayClientMessage(error, false);
+            source.sendFailure(error);
             return -1;
          }
          
-         Team abstractTeam = player.getTeam();
+         Team abstractTeam = player == null ? null : player.getTeam();
          ChatFormatting playerColor = abstractTeam != null ? abstractTeam.getColor() : ChatFormatting.WHITE;
          
-         if (!player.equals(target)){
+         if(player != null && !player.equals(target)){
             final Component senderText = Component.literal("")
                   .append(Component.literal("You whisper a link to ").withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC))
                   .append(Component.literal(source.getTextName()).withStyle(playerColor).withStyle(ChatFormatting.ITALIC));
@@ -126,22 +128,22 @@ public class Linksinchat implements ModInitializer {
       }
    }
    
-   public static URI ensureHttpsAndValidate(String input) {
-      if (input == null) return null;
+   public static URI ensureHttpsAndValidate(String input){
+      if(input == null) return null;
       String urlStr = input.trim();
-      if (urlStr.isEmpty()) return null;
-      if (!urlStr.matches("^[a-zA-Z][a-zA-Z0-9+.-]*://.*$")) {
+      if(urlStr.isEmpty()) return null;
+      if(!urlStr.matches("^[a-zA-Z][a-zA-Z0-9+.-]*://.*$")){
          urlStr = "https://" + urlStr;
       }
-      try {
+      try{
          URI uri = new URI(urlStr);
          String scheme = uri.getScheme();
-         if (scheme == null) return null;
-         if (!scheme.equalsIgnoreCase("http") && !scheme.equalsIgnoreCase("https")) return null;
+         if(scheme == null) return null;
+         if(!scheme.equalsIgnoreCase("http") && !scheme.equalsIgnoreCase("https")) return null;
          String host = uri.getHost();
-         if (host == null || host.isEmpty()) return null;
+         if(host == null || host.isEmpty()) return null;
          return uri;
-      } catch (URISyntaxException e) {
+      }catch(URISyntaxException e){
          return null;
       }
    }
