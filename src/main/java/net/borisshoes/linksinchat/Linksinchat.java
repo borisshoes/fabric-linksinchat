@@ -17,7 +17,6 @@ import org.apache.logging.log4j.Logger;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 
 import static net.minecraft.commands.Commands.argument;
 import static net.minecraft.commands.Commands.literal;
@@ -59,15 +58,17 @@ public class Linksinchat implements ModInitializer {
          }
          
          ChatFormatting playerColor = ChatFormatting.WHITE;
-         if(player != null && player.getTeam() != null){
-            playerColor = player.getTeam().getColor();
+         Team broadcastTeam = player != null ? player.getTeam() : null;
+         if(broadcastTeam != null){
+            playerColor = broadcastTeam.getColor();
          }
          
          final Component announceText = Component.literal("")
-               .append(Component.literal(source.getTextName()).withStyle(playerColor).withStyle())
+               .append(Component.literal(source.getTextName() != null ? source.getTextName() : "").withStyle(playerColor).withStyle())
                .append(Component.literal(" has a link to share!").withStyle());
          URI finalUri = uri;
-         final Component text = Component.literal(message).withStyle(s ->
+         String safeMessage = message != null ? message : "";
+         final Component text = Component.literal(safeMessage).withStyle(s ->
                s.withClickEvent(new ClickEvent.OpenUrl(finalUri))
                      .withHoverEvent(new HoverEvent.ShowText(Component.literal("Click to Open Link!")))
                      .withColor(ChatFormatting.BLUE).withUnderlined(true));
@@ -98,12 +99,13 @@ public class Linksinchat implements ModInitializer {
          Team abstractTeam = player == null ? null : player.getTeam();
          ChatFormatting playerColor = abstractTeam != null ? abstractTeam.getColor() : ChatFormatting.WHITE;
          
-         if(player != null && !player.equals(target)){
+         if(player != null && player != target){
             final Component senderText = Component.literal("")
                   .append(Component.literal("You whisper a link to ").withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC))
-                  .append(Component.literal(source.getTextName()).withStyle(playerColor).withStyle(ChatFormatting.ITALIC));
+                  .append(Component.literal(source.getTextName() != null ? source.getTextName() : "").withStyle(playerColor).withStyle(ChatFormatting.ITALIC));
             
-            final Component senderLink = Component.literal(message).withStyle(s ->
+            String safeSenderMessage = message != null ? message : "";
+            final Component senderLink = Component.literal(safeSenderMessage).withStyle(s ->
                   s.withClickEvent(new ClickEvent.OpenUrl(uri))
                         .withHoverEvent(new HoverEvent.ShowText(Component.literal("Click to Open Link!")))
                         .withColor(ChatFormatting.BLUE).withItalic(true));
@@ -112,9 +114,10 @@ public class Linksinchat implements ModInitializer {
          }
          
          final Component announceText = Component.literal("")
-               .append(Component.literal(source.getTextName()).withStyle(playerColor).withStyle(ChatFormatting.ITALIC))
+               .append(Component.literal(source.getTextName() != null ? source.getTextName() : "").withStyle(playerColor).withStyle(ChatFormatting.ITALIC))
                .append(Component.literal(" whispers a link to you!").withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
-         final Component text = Component.literal(message).withStyle(s ->
+         String safeWhisperMessage = message != null ? message : "";
+         final Component text = Component.literal(safeWhisperMessage).withStyle(s ->
                s.withClickEvent(new ClickEvent.OpenUrl(uri))
                      .withHoverEvent(new HoverEvent.ShowText(Component.literal("Click to Open Link!")))
                      .withColor(ChatFormatting.BLUE).withItalic(true).withUnderlined(true));
