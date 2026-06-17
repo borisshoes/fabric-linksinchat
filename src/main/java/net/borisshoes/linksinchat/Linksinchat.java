@@ -12,6 +12,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.scores.Team;
+import net.minecraft.world.scores.TeamColor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -44,7 +45,7 @@ public class Linksinchat implements ModInitializer {
       });
    }
    
-   public static int broadcast(CommandSourceStack source, String message) throws CommandSyntaxException{
+   public static int broadcast(CommandSourceStack source, String message){
       try{
          final Component error = Component.literal("Invalid Link").withStyle(ChatFormatting.RED, ChatFormatting.ITALIC);
          ServerPlayer player = source.getPlayer();
@@ -58,13 +59,13 @@ public class Linksinchat implements ModInitializer {
             return -1;
          }
          
-         ChatFormatting playerColor = ChatFormatting.WHITE;
+         TeamColor playerColor = TeamColor.WHITE;
          if(player != null && player.getTeam() != null){
-            playerColor = player.getTeam().getColor();
+            playerColor = player.getTeam().getColor().orElse(TeamColor.WHITE);
          }
          
          final Component announceText = Component.literal("")
-               .append(Component.literal(source.getTextName()).withStyle(playerColor).withStyle())
+               .append(Component.literal(source.getTextName()).withColor(playerColor.textColor()).withStyle())
                .append(Component.literal(" has a link to share!").withStyle());
          URI finalUri = uri;
          final Component text = Component.literal(message).withStyle(s ->
@@ -96,12 +97,12 @@ public class Linksinchat implements ModInitializer {
          }
          
          Team abstractTeam = player == null ? null : player.getTeam();
-         ChatFormatting playerColor = abstractTeam != null ? abstractTeam.getColor() : ChatFormatting.WHITE;
+         TeamColor playerColor = abstractTeam != null ? abstractTeam.getColor().orElse(TeamColor.WHITE) : TeamColor.WHITE;
          
          if(player != null && !player.equals(target)){
             final Component senderText = Component.literal("")
                   .append(Component.literal("You whisper a link to ").withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC))
-                  .append(Component.literal(source.getTextName()).withStyle(playerColor).withStyle(ChatFormatting.ITALIC));
+                  .append(Component.literal(source.getTextName()).withColor(playerColor.textColor()).withStyle(ChatFormatting.ITALIC));
             
             final Component senderLink = Component.literal(message).withStyle(s ->
                   s.withClickEvent(new ClickEvent.OpenUrl(uri))
@@ -112,7 +113,7 @@ public class Linksinchat implements ModInitializer {
          }
          
          final Component announceText = Component.literal("")
-               .append(Component.literal(source.getTextName()).withStyle(playerColor).withStyle(ChatFormatting.ITALIC))
+               .append(Component.literal(source.getTextName()).withColor(playerColor.textColor()).withStyle(ChatFormatting.ITALIC))
                .append(Component.literal(" whispers a link to you!").withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
          final Component text = Component.literal(message).withStyle(s ->
                s.withClickEvent(new ClickEvent.OpenUrl(uri))
