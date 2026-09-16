@@ -28,8 +28,8 @@
   },
   "custom": {
     "mc-publish": {
-      "modrinth-id": "klpvLefw",
-      "curseforge-id": 1331027
+      "modrinth": "klpvLefw",
+      "curseforge": 1331027
     }
   }
 }
